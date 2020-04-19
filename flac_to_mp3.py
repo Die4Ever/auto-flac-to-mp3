@@ -10,7 +10,7 @@ from pathlib import Path
 
 parser = argparse.ArgumentParser()
 parser.add_argument('files', nargs='*', help='List of input files')
-parser.set_defaults(files=['./*'])
+parser.set_defaults(files=['./'])
 args = parser.parse_args()
 
 def calla(cmds):
@@ -18,9 +18,11 @@ def calla(cmds):
     subprocess.Popen(cmds).wait()
 
 def insensitive_glob(pattern):
-    def either(c):
-        return '[%s%s]' % (c.lower(), c.upper()) if c.isalpha() else c
-    return glob.glob(''.join(map(either, pattern)), recursive=True) + glob.glob(''.join(map(either, pattern))+'/**', recursive=True) + glob.glob(''.join(map(either, pattern))+'/*', recursive=True)
+    return (
+        glob.glob(pattern, recursive=True)
+        + glob.glob(pattern+'/**', recursive=True)
+        + glob.glob(pattern+'/*', recursive=True)
+    )
 
 def exists(file):
     exists = os.path.isfile(file)
@@ -44,6 +46,6 @@ def proc_file(file):
     convert(file, mp3)
 
 for arg in args.files:
-    for file in insensitive_glob(arg):
+    for file in insensitive_glob(arg+'*'):
         if(file.endswith('.flac')):
             proc_file(file)
