@@ -1,11 +1,7 @@
-import sys
 import argparse
 import glob
-import re
-import json
 import argparse
 import subprocess
-import os.path
 from pathlib import Path
 
 parser = argparse.ArgumentParser()
@@ -24,28 +20,28 @@ def insensitive_glob(pattern):
         + glob.glob(pattern+'/*', recursive=True)
     )
 
-def exists(file):
-    exists = os.path.isfile(file)
-    if exists:
-        print("file already exists: " + file)
-    return exists
+def convert(src: Path, dest: Path):
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    if dest.suffix == '.mp3':
+        calla(['ffmpeg', '-i', str(src), '-c:v', 'copy', '-q:a', '0', str(dest)])
+    else:
+        calla(['ffmpeg', '-i', str(src), '-c:a', dest.suffix[1:], str(dest)])
 
-def convert(file, mp3):
-    p = Path(mp3).parent
-    if not p.exists():
-        p.mkdir()
-    calla(['ffmpeg', '-i', file, '-c:v', 'copy', '-q:a', '0', mp3])
-
-def proc_file(file):
-    mp3_path = list(Path(file).parts)
-    mp3_path[-2] += " MP3"
-    mp3_path[-1] = re.sub( r'.flac$', '.mp3', mp3_path[-1], flags=re.IGNORECASE)
-    mp3 = str(Path(*mp3_path))
-    if exists(mp3):
+def proc_file(src, new_format:str):
+    src = Path(src)
+    dest_path = list(src.parts)
+    dest_path[-2] += " " + new_format.upper()
+    dest_path[-1] = src.stem +'.'+ new_format.lower()
+    dest: Path = Path(*dest_path)
+    if dest.exists():
         return
-    convert(file, mp3)
+    convert(src, dest)
+    return dest
 
 for arg in args.files:
     for file in insensitive_glob(arg+'*'):
         if(file.endswith('.flac')):
-            proc_file(file)
+            proc_file(file, 'mp3')
+        if(file.endswith('.aiff')):
+            result = proc_file(file, 'flac')
+            proc_file(result, 'mp3')
